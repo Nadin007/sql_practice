@@ -9,7 +9,7 @@
     <title>Document</title>
 </head>
 <body>
-	<a href="https://stepik.org/">Созданно на основе сайта stepik.org</a>
+    <a href="https://stepik.org/">Созданно на основе сайта stepik.org</a>
     <h2> Задание</h2>
 
 <p><em><strong>автор - </strong></em><a href="https://stepik.org/users/178481801" rel="noopener noreferrer nofollow">Dmitry Kravtsov</a></p>
@@ -4137,7 +4137,15 @@ Affected rows: 3</code></pre>
 | 1.3.04 Выборка данных, групповые функции MIN, MAX и AVG |
 | 1.4.06 Вложенный запрос после SELECT                    |
 +---------------------------------------------------------+</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Выборка данных с созданием вычисляемого столбца</h2>
+</details> <br><hr><br> <pre><code class="hljs language-sql">SELECT CONCAT(module.module_id, '.', lesson.lesson_position, '.', IF(step.step_position > 9, step.step_position, CONCAT(0, step.step_position)), ' ', step_name) AS Шаг
+From module inner join lesson USING(module_id)
+INNER JOIN step USING(lesson_id)
+INNER JOIN step_keyword USING(step_id)
+INNER JOIN keyword USING(keyword_id)
+WHERE keyword.keyword_name REGEXP CONCAT('\\b', 'MAX', '\\b') OR keyword.keyword_name REGEXP CONCAT('\\b', 'AVG', '\\b')
+GROUP BY module.module_id,step.step_id
+HAVING COUNT(step_name) = 2
+ORDER BY 1;</code></pre><h2>Выборка данных с созданием вычисляемого столбца</h2>
 
 <p>С помощью SQL запросов можно осуществлять вычисления по каждой строке таблицы с помощью вычисляемого столбца. Для него в списке полей после оператора <code><strong>SELECT</strong></code> указывается выражение и задается имя.</p>
 
@@ -5669,7 +5677,31 @@ END  </code></pre>
 | III    | от 16 до 27 | 9          |
 | IV     | больше 27   | 18         |
 +--------+-------------+------------+</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Выборка данных, вычисляемые столбцы, математические функции</h2>
+</details> <br><hr><br> <pre><code class="hljs language-sql">SELECT Группа, 
+CASE
+    WHEN Группа = 'I' THEN 'от 0 до 10'
+    WHEN Группа = 'II' THEN 'от 11 до 15'
+    WHEN Группа = 'III' THEN 'от 16 до 27'
+    ELSE 'больше 27' END AS Интервал,
+    COUNT(*) AS Количество
+FROM (
+    SELECT student_name, rate,
+    CASE 
+        WHEN rate <= 10 THEN "I"
+        WHEN rate <= 15 THEN 'II'
+        WHEN rate <= 27 THEN 'III'
+        ELSE 'IV'
+        END AS Группа
+    FROM (
+        SELECT student_name, COUNT(*) AS rate
+        FROM (
+            SELECT student_name, step_id
+            FROM step_student INNER JOIN student USING(student_id)
+            WHERE result = 'correct'
+            GROUP BY student_name, step_id) AS query_1
+        GROUP BY student_name
+        ORDER BY 2) AS query_2) AS query_3
+GROUP BY Группа</code></pre><h2>Выборка данных, вычисляемые столбцы, математические функции</h2>
 
 <p>В SQL реализовано множество  <a href="https://docs.microsoft.com/ru-ru/sql/t-sql/functions/mathematical-functions-transact-sql?view=sql-server-ver15" rel="noopener noreferrer nofollow">математических функций</a> для работы с числовыми данными. В таблице приведены некоторые из них.</p>
 
@@ -7337,7 +7369,42 @@ Affected rows: 32
 | Построение логической схемы базы данных                                  | 100        |
 +--------------------------------------------------------------------------+------------+
 Affected rows: 32</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Выборка данных, вычисляемые столбцы, логические функции</h2>
+</details> <br><hr><br> <pre><code class="hljs language-sql">WITH get_count_correct (st_n_c, count_correct) 
+  AS (
+    SELECT step_name, count(*)
+    FROM 
+        step 
+        INNER JOIN step_student USING (step_id)
+    WHERE result = "correct"
+    GROUP BY step_name
+   ),
+  get_count_wrong (st_n_w, count_wrong) 
+  AS (
+    SELECT step_name, count(*)
+    FROM 
+        step 
+        INNER JOIN step_student USING (step_id)
+    WHERE result = "wrong"
+    GROUP BY step_name
+   )  
+SELECT st_n_c AS Шаг,
+    IF(st_n_c NOT IN (
+    Select st_n_w From get_count_wrong), 100, ROUND(count_correct / (count_correct + count_wrong) * 100)) AS Успешность
+FROM  
+    get_count_correct 
+    LEFT JOIN get_count_wrong ON st_n_c = st_n_w
+UNION
+SELECT st_n_w AS Шаг,
+    IF(st_n_w NOT IN (SELECT st_n_c From get_count_correct), 0, ROUND(count_correct / (count_correct + count_wrong) * 100)) AS Успешность
+FROM  
+    get_count_correct 
+    RIGHT JOIN get_count_wrong ON st_n_c = st_n_w
+ORDER BY 2, 1 ASC ;
+
+
+
+
+</code></pre><h2>Выборка данных, вычисляемые столбцы, логические функции</h2>
 
 <p>В SQL реализована возможность заносить в поле значение в зависимости от условия. Для этого используется функция <code>IF</code>:</p>
 
@@ -8811,7 +8878,22 @@ LIMIT 3;
 | student_47 | 25       |                       |
 +------------+----------+-----------------------+
 Affected rows: 64</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><p><span style="color: #006600;">На этом шаге нужно написать и проверить SQL запрос. Сначала кратко описывается структура и особенности запроса, приводится пример. А затем формулируется задание, для которого нужно реализовать запрос.</span></p>
+</details> <br><hr><br> <pre><code class="hljs language-sql">WITH get_correct_answers(student_name, count_correst) AS
+(SELECT student_name, COUNT(DISTINCT(step_id))
+FROM step_student INNER JOIN student USING(student_id)
+WHERE result = 'correct'
+GROUP BY student_id),
+get_all_answers(count_all) AS
+(SELECT COUNT(DISTINCT(step_id))
+FROM step_student)
+SELECT student_name AS Студент, ROUND((count_correst/count_all)*100) AS Прогресс,
+CASE
+WHEN ROUND((count_correst/count_all)*100) < 80 THEN ''
+WHEN ROUND((count_correst/count_all)*100) < 100 THEN 'Сертификат'
+ELSE 'Сертификат с отличием'
+END AS Результат
+FROM get_correct_answers CROSS JOIN get_all_answers
+ORDER BY Прогресс DESC</code></pre><p><span style="color: #006600;">На этом шаге нужно написать и проверить SQL запрос. Сначала кратко описывается структура и особенности запроса, приводится пример. А затем формулируется задание, для которого нужно реализовать запрос.</span></p>
 
 <h2>Создание таблицы</h2>
 
@@ -10535,7 +10617,15 @@ Affected rows: 64
 | student_61 | Перекрестное соедине... | correct   | 2020-09-01 10:47:55 | 0:01:34          |
 +------------+-------------------------+-----------+---------------------+------------------+
 Affected rows: 43</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><p><span style="color: #006600;">На каждом шаге можно посмотреть, как  работает запрос примера. Для этого нужно скопировать его код в окно для ввода и нажать на черную кнопку <strong>Запустить код</strong> (не отправляя на проверку). Те запросы, которые уже проверены, можно не удалять, а просто закомментировать, используя /* и */.</span></p>
+</details> <br><hr><br> <pre><code class="hljs language-sql">SELECT student_name, CONCAT(LEFT(step_name, 20), '...') AS Шаг,
+result AS Результат,
+FROM_UNIXTIME(submission_time) AS Дата_отправки,
+SEC_TO_TIME(-IFNULL(LAG(submission_time) OVER (ORDER BY submission_time ASC) - submission_time, 0)) AS Разница
+FROM step INNER JOIN step_student Using(step_id) INNER JOIN student Using(student_id)
+WHERE student_name = 'student_61'
+ORDER BY submission_time
+
+</code></pre><p><span style="color: #006600;">На каждом шаге можно посмотреть, как  работает запрос примера. Для этого нужно скопировать его код в окно для ввода и нажать на черную кнопку <strong>Запустить код</strong> (не отправляя на проверку). Те запросы, которые уже проверены, можно не удалять, а просто закомментировать, используя /* и */.</span></p>
 
 <h2>Вставка записи в таблицу</h2>
 
@@ -11956,7 +12046,18 @@ WHERE book.price = supply.price;
 | 2     | 1.2 Выборка данных                                          | 2.65          |
 | 3     | 2.4 База данных "Интернет-магазин книг", запросы на выборку | 3.65          |
 +-------+-------------------------------------------------------------+---------------+</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Задание</h2>
+</details> <br><hr><br> <pre><code class="hljs language-sql">SELECT ROW_NUMBER() OVER (ORDER BY ROUND(AVG(spent_l), 2) ASC) AS Номер,
+CONCAT(module_id, '.', lesson_position, ' ', lesson_name) AS Урок, ROUND(AVG(spent_l), 2) AS Среднее_время
+from (
+    SELECT student_id, module_id, lesson.lesson_id, lesson_name, (SUM(spent_t)/3600) AS spent_l, lesson_position
+    FROM lesson inner join
+        (SELECT student_id, step_id, (submission_time - attempt_time) AS spent_t, lesson_id
+        FROM step_student INNER JOIN step USING(step_id)
+        WHERE (submission_time - attempt_time) < (60*60*4)) AS tabl 
+        ON lesson.lesson_id = tabl.lesson_id
+    GROUP BY student_id, lesson.lesson_id) AS tbs_2
+GROUP BY lesson_id
+</code></pre><h2>Задание</h2>
 
 <p>Занесите три последние записи в таблицу<code><strong>book</strong></code>,  первая запись уже добавлена на предыдущем шаге:</p>
 
@@ -13095,7 +13196,19 @@ Affected rows: 3</code></pre>
 | 2      | student_26 | 2              | 9.5                   |
 +--------+------------+----------------+-----------------------+
 Affected rows: 95</code></pre>
-</details> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Выборка данных с сортировкой</h2>
+</details> <br><hr><br> <pre><code class="hljs language-sql">WITH get_rate(mod_id, stud_name, steps, max_step)
+AS (
+SELECT module_id, student_name, COUNT(DISTINCT step_id), MAX(COUNT(DISTINCT step_id)) OVER (PARTITION BY module_id)
+FROM student INNER JOIN step_student USING(student_id) INNER JOIN step USING (step_id) INNER JOIN lesson USING (lesson_id)
+WHERE result = "correct"
+GROUP BY 1, 2)
+SELECT mod_id As Модуль, stud_name AS Студент, steps AS Пройдено_шагов,
+ROUND((steps/max_step) * 100, 1) AS Относительный_рейтинг
+FROM get_rate
+ORDER BY mod_id, ROUND(steps/max_step, 1) DESC
+
+
+</code></pre><h2>Выборка данных с сортировкой</h2>
 
 <p>При выборке можно указывать столбец или несколько столбцов, по которым необходимо отсортировать отобранные строки. Для этого используются ключевые слова <code>ORDER BY</code>, после которых задаются имена столбцов. При этом строки сортируются по первому столбцу, если указан второй столбец, сортировка осуществляется только для тех строк, у которых значения первого столбца одинаковы. По умолчанию <code>ORDER BY</code> выполняет сортировку по возрастанию. Чтобы управлять направлением сортировки вручную, после имени столбца указывается ключевое слово <code>ASC</code> (по возрастанию) или <code>DESC</code> (по убыванию). </p>
 
@@ -13980,7 +14093,22 @@ Affected rows: 69</code></pre>
 </ul>
 
 <p>Столбцы назвать  <code><strong>Студент</strong></code>, <code><strong>Урок</strong></code>,  <code><strong>Макс_время_отправки</strong></code> и <code><strong>Интервал </strong></code> соответственно. Отсортировать результаты по имени студента в алфавитном порядке, а потом по возрастанию времени отправки.</p>
-</blockquote> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Выборка данных, оператор LIKE</h2>
+</blockquote> <br><hr><br> <pre><code class="hljs language-sql">WITH get_array(st_id, st_name, less, sub_time)
+AS (
+SELECT student_id, student_name, CONCAT(module_id, '.', lesson_position), MAX(submission_time)
+FROM student INNER JOIN step_student Using(student_id)
+INNER JOIN step USING(step_id) INNER JOIN lesson USING(lesson_id)
+WHERE result = 'correct'
+GROUP BY student_id, lesson_id),
+requirements(st_id) AS
+(SELECT st_id
+ FROM get_array
+ GROUP BY st_id
+ HAVING COUNT(*) >= 3)
+SELECT st_name AS Студент, less AS Урок, FROM_UNIXTIME(sub_time) AS Макс_время_отправки,
+IFNULL(CEIL((sub_time - LAG(sub_time) OVER(PARTITION BY st_name ORDER BY sub_time))/ 86400), '-') AS Интервал
+FROM get_array JOIN requirements USING(st_id)
+ORDER BY 1, 3 ASC</code></pre><h2>Выборка данных, оператор LIKE</h2>
 
 <p>Оператор <code>LIKE</code> используется для сравнения строк. В отличие от операторов отношения равно (<strong>=</strong>) и не равно (<strong>&lt;&gt;</strong>), <code>LIKE</code> позволяет сравнивать строки не на полное совпадение (не совпадение), а в соответствии с шаблоном. Шаблон может включать <strong>обычные символы</strong> и <strong>символы-шаблоны</strong>. При сравнении с шаблоном, его обычные символы должны в точности совпадать с символами, указанными в строке. Символы-шаблоны могут совпадать с произвольными элементами символьной строки.</p>
 
@@ -14463,7 +14591,34 @@ Affected rows: 58</code></pre>
 <p>Столбцы назвать  <code><strong>Студент</strong></code>, <strong> <code>Шаг</code></strong>, <code><strong>Номер_попытки</strong></code>, <code><strong>Результат</strong></code>, <code><strong>Время_попытки</strong></code> и <code><strong>Относительное_время</strong></code>. Информацию отсортировать сначала по возрастанию <strong>id</strong> шага, а затем по возрастанию номера попытки (определяется по времени отправки попытки).</p>
 
 <p><strong>Важно. </strong>Все вычисления производить в секундах, округлять и переводить во временной формат только для вывода результата.</p>
-</blockquote> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Задание</h2>
+</blockquote> <br><hr><br> <pre><code class="hljs language-sql">WITH arr_a
+AS (SELECT student_name AS Студент,
+CONCAT(module_id, '.', lesson_position, '.', step_position) AS Шаг,
+ROW_NUMBER() OVER(PARTITION BY step_id ORDER BY submission_time) AS Номер_попытки,
+result AS Результат,
+step_id,
+(submission_time - attempt_time) AS Вр_попытки
+FROM student INNER JOIN step_student USING(student_id)
+INNER JOIN step USING(step_id)
+INNER JOIN lesson USING(lesson_id)
+WHERE student_name = 'student_59'),
+arr_b AS
+(SELECT Студент, CEIL(AVG(Вр_попытки)) AS att_av
+FROM arr_a
+WHERE Вр_попытки <= 60*60
+GROUP BY Студент),
+arr_c AS (
+    SELECT Студент,
+    step_id,
+    Номер_попытки,
+    (IF(Вр_попытки > 60*60, att_av, Вр_попытки)) AS Время_попытки,
+    SUM(IF(Вр_попытки > 60*60, att_av, Вр_попытки)) OVER(PARTITION BY step_id) AS sum_time
+    FROM arr_a INNER JOIN arr_b USING(Студент))
+
+SELECT arr_a.Студент, Шаг, arr_a.Номер_попытки, Результат,
+SEC_TO_TIME(Время_попытки) AS Время_попытки,
+ROUND(Время_попытки/sum_time * 100, 2) AS Относительное_время
+FROM arr_a INNER JOIN arr_c ON arr_a.step_id = arr_c.step_id AND arr_a.Номер_попытки = arr_c.Номер_попытки</code></pre><h2>Задание</h2>
 
 <p>Придумайте один или несколько запросов к нашей таблице <code><strong>book</strong></code>. Проверьте, правильно ли они работают.</p>
 
@@ -14661,7 +14816,47 @@ Affected rows: 32</code></pre>
 </ul>
 
 <p>Вывести группу (<code><strong>I, II, III</strong></code>), имя пользователя, количество шагов, которые пользователь выполнил по соответствующему способу. Столбцы назвать <code><strong>Группа, Студент, Количество_шагов</strong></code>. Отсортировать информацию по возрастанию номеров групп, потом по убыванию количества шагов и, наконец, по имени студента в алфавитном порядке.</p>
-</blockquote> <br><hr><br> <pre><code class="hljs language-sql">NOT SOLVED!</code></pre><h2>Задание</h2>
+</blockquote> <br><hr><br> <pre><code class="hljs language-sql">WITH preparation_arr AS (
+SELECT student_name, result, step_id, submission_time, IF(result='wrong', 0, 1) AS comperance
+FROM student INNER JOIN step_student USING(student_id)
+ORDER BY student_name, step_id, submission_time),
+grouped_arr AS (
+SELECT student_name, result, step_id, comperance, submission_time,
+IF(result='correct' AND LEAD(result) OVER (PARTITION BY student_name, step_id ORDER BY submission_time) = 'wrong', 'group_I', '-') AS filter_I,
+IF(SUM(comperance) OVER (PARTITION BY student_name, step_id) > 1, 'group_II', '-') AS filter_II,
+IF(SUM(comperance) OVER (PARTITION BY student_name, step_id) = 0, 'group_III', '-') AS filter_III
+FROM preparation_arr
+ORDER BY student_name, step_id, submission_time),
+group_II AS (
+SELECT student_name, step_id,
+(ROW_NUMBER() OVER (PARTITION BY student_name)) AS step_frequency, CONCAT('II') AS Группа
+FROM grouped_arr
+WHERE filter_II = 'group_II'
+GROUP BY student_name, step_id),
+group_III AS (
+SELECT student_name, step_id,
+(ROW_NUMBER() OVER (PARTITION BY student_name)) AS step_frequency, CONCAT('III') AS Группа
+FROM grouped_arr
+WHERE filter_III = 'group_III'
+GROUP BY student_name, step_id),
+group_I AS (
+SELECT student_name, step_id,
+(ROW_NUMBER() OVER (PARTITION BY student_name)) AS step_frequency, CONCAT('I') AS Группа
+FROM grouped_arr
+WHERE filter_I = 'group_I')
+
+SELECT Группа, student_name, MAX(step_frequency) AS Количество_шагов
+FROM group_I
+GROUP BY student_name
+UNION ALL
+SELECT Группа, student_name, MAX(step_frequency) AS Количество_шагов
+FROM group_II
+GROUP BY student_name
+UNION ALL
+SELECT Группа, student_name, MAX(step_frequency) AS Количество_шагов
+FROM group_III
+GROUP BY student_name
+ORDER BY Группа, Количество_шагов DESC</code></pre><h2>Задание</h2>
 
 <blockquote>
 <p><em>Этот шаг добавлен по рекомендациям пользователей: </em><a href="https://stepik.org/users/37374841" rel="noopener noreferrer nofollow" title="Показать профиль пользователя">Тимур Timmmyyy</a>, <a href="https://stepik.org/users/33149099" rel="noopener noreferrer nofollow" title="Показать профиль пользователя">Todor Illia</a>, <a href="https://stepik.org/users/123836326" rel="noopener noreferrer nofollow">Лёха Last name</a>, <a href="https://stepik.org/users/58247085" rel="noopener noreferrer nofollow" title="Показать профиль пользователя">Игорь Владимирович Лапшин</a> и др.</p>
